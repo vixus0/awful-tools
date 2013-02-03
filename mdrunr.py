@@ -13,7 +13,7 @@ class Mdrunr: the actual queueing system
 Author: Anshul Sirur
 """
 
-import sys, time
+import time
 import multiprocessing as mp
 import threading as thr
 import Queue as qu
@@ -25,85 +25,84 @@ flog=open("/tmp/mdrunr.log", "w")
 class Mdjob :
   """Defines a job to run."""
 
-  def __init__(self, name, args, mpi_mode=True):
+  def __init__(self, name, args, nprocs, mpi_mode=True):
     """Create a job.
 
-    Arguments are name and an argument list (use shlex.split!).
+    :Parameters:
+        - `name` : Job identifier.
+        - `args` : command to run this job.
+        - `nprocs` : number of processors this job will use.
+        - `mpi_mode` : [default: True] If True, this job is
+            run using 'mpiexec -n <nprocs> <args>'
     """
     self.name = name
     self.args = args
-    self.mpi_mode = mpi_mode
-
-  def run(self,np_per):
-    if self.mpi_mode: 
-      md_job = ["mpiexec", "-n", np_per] + self.args
-    else: 
-      md_job = self.args
-    sp.call(md_job, stdout=fnull, stderr=flog)
-
-class runner (thr.Thread):
-  def __init__(self, queue, np_per,mpi_mode=True):
-    thr.Thread.__init__(self)
-    self.my_queue = queue
-    self.np_per = np_per
+    self.nprocs = nprocs
     self.mpi_mode = mpi_mode
 
   def run(self):
-    while True:
-      try:
-        my_job = self.my_queue.get(True,2)
-      except qu.Empty:
-        return
-      else:
-        if my_job:
-          print "Starting job: ", my_job.name
-          my_job.run(self.np_per)
-          print "Done: ", my_job.name
-          time.sleep(.5)
-          self.my_queue.task_done()
+    if self.mpi_mode: 
+      md_job = "mpiexec -n "+ str(self.nprocs) + " " + self.args
+    else: 
+      md_job = self.args
+    sp.call(md_job, stdout=fnull, stderr=flog, shell=True)
+
+
+class Runner(thr.Thread):
+    def __init__(self, job, queue):
+        print "Thread born."
+        self.job = job
+        self.queue = queue
+        thr.Thread.__init__(self)
+
+    def run(self):
+        print "Starting job: ",self.job.name
+        self.job.run()
+        print "Done: ",self.job.name
+        time.sleep(0.5)
+        self.queue.finish_job(self,self.job)
 
 
 class Mdrunr :
   """Sets up and runs a queue."""
 
-  def __init__(self, md_args_list, np_per, np_tot=None):
+  def __init__(self, md_args_list, np_tot=None):
     """Initialise the queue.
 
     :Parameters:
         - `md_args_list` : MdJob instances describing the jobs.
-        - `np_per` : number of processes to use per job.
-        - `np_tot` : total number of processors to use.
+        - `np_tot` : total number of processors to use 
+            [default: all cores on this computer].
     """
     if np_tot is None:
         self.np_tot   = mp.cpu_count()
     else:
         self.np_tot = np_tot
 
-    if np_per > self.np_tot:
-      print "You can't specify more than %d processors per job!"%(self.np_tot)
-      sys.exit(1)
-
-    self.np_per   = np_per
-    self.nthr     = self.np_tot / np_per
     self.jobs     = md_args_list
     self.queue    = qu.Queue(maxsize=len(md_args_list))
+    self.free_cores = self.np_tot
+
+
+  def finish_job(self, runner, job):
+    self.free_cores += job.nprocs
+
+  def start_next_job_when_possible(self):
+      job = self.queue.get()
+      print "Next job queued: ",job.name
+      while job.nprocs > self.free_cores:
+          time.sleep(1)
+      self.free_cores -= job.nprocs
+      runner = Runner(job,self)
+      runner.daemon = True
+      runner.start()
 
   def start(self):
     """Start submitting jobs from the queue."""
-    try:
-
-      for x in self.jobs:
-        print "Added job: ", x.name
+    #self.init_runners()
+    for x in self.jobs:
         self.queue.put(x)
-      
-      for i in range(self.nthr):
-        t = runner(self.queue, self.np_per)
-        t.daemon = True
-        t.start()
-
-      self.queue.join()
-      print "done!"
-    except (KeyboardInterrupt, SystemExit):
-      print "Force quit!"
+    while not self.queue.empty():
+        self.start_next_job_when_possible()
 
 
