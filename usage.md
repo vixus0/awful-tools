@@ -25,3 +25,7 @@ Then, submit the job to the queue-server:
     >>> qserver.add_job(job1)
 
 The queuing server can currently only be closed by killing it. Note that killing it may not kill jobs which are currently active.
+
+The jobs currently queued can be listed using:
+
+    >>> qserver.list_jobs()
