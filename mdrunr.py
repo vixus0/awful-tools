@@ -10,6 +10,18 @@ the moment but in consecutive order, so think about the queue order!
 class Mdjob: defines a job by name and by commandline argument list
 class Mdrunr: the actual queueing system
 
+:Examples:
+
+    >>> job1 = Mdjob("job-ls", "ls", nprocs=2, mpi_mode=False)
+    # Define a job that will require two processors and run "ls"
+    # on the command line.
+    >>> job2 = Mdjob("job-whoami", "whoami", nprocs=1, mpi_mode=False)
+    >>> q = Mdrunr((job1, job2), nptot=3)
+    # Define a queue "q" that will run job1 then job2 
+    # (concurrently in this case).
+    >>> q.start() 
+    # Actually start the queue.
+
 Author: Anshul Sirur
 """
 
