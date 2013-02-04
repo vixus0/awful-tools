@@ -17,7 +17,7 @@ Define your jobs as follows:
     >>> import mdclient as mdc
     >>> import mdrunr as mdr
     >>> job1 = mdc.Mdjob("job-1","ls",nprocs=1,mpi_mode=False)
-    >>> job2 = mdc.Mdjob("job-2","whoami",nprocs=2,mpi_mode=False)
+    >>> job2 = mdc.Mdjob("job-2","whoami",nprocs=2,mpi_mode=False,directory="~/directory")
 
 Then just start the jobs:
 
@@ -59,6 +59,22 @@ You can also list jobs in a similar manner.
 
 The advantage of using this method is that you can exit the python shell without killing the underlying server. The disadvantage is that everything is likely to crash and burn in an orgy of fire and death.
 
+
+Defining jobs
+=============
+
+Jobs are defined using the `Mdjob` function in the `mdclient` module. The function signature is as follows:
+
+    Mdjob(name, args, nprocs, mpi_mode, directory)
+
+- `name` : String to identify job. Should be unique.
+- `args` : The command line string to execute the job. This just gets passed directly
+	 to the shell.
+	 Valid args strings include `ls`, `rm -rf *`, `find ~ -name "ali_babas_treasure_trove"`, etc.
+- `nprocs` : How many cores this job will occupy. If the queue is launched with 4 processors, it will run a single job with `nprocs = 4`, or two jobs with `nprocs = 2`, concurrently, or four jobs with `nprocs = 1`, concurrently.
+- `mpi_mode` : If True (default), then the `args` string is prefixed with `mpiexec -n <nprocs>` when passed to the shell. Thus, `args` should just contain the arguments to the MPI job.
+- `directory` : move to this directory before running the job.
+ 
 
 Notes
 =====
