@@ -4,7 +4,7 @@
 mdrunr
 ======
 
-Provide a queuing server.
+Provide a queuing system.
 
 Author: Anshul Sirur
 """
@@ -15,8 +15,6 @@ import threading as thr
 import Queue as qu
 import logging
 import collections
-
-import Pyro.core
 
 logging.basicConfig(filename="mdrunr.log",level=logging.DEBUG)
 # To also log to stdout:
@@ -72,7 +70,7 @@ class Runner(thr.Thread):
         self.queue._finish_job(self,self.job)
 
 
-class Mdrunr(Pyro.core.ObjBase):
+class Mdrunr(object):
     """Sets up and runs a queue."""
 
     def __init__(self, md_args_list=None, np_tot=None):
@@ -113,7 +111,6 @@ class Mdrunr(Pyro.core.ObjBase):
         self.free_cores = self.np_tot
         for x in jobs:
             self.add_job(x)
-        Pyro.core.ObjBase.__init__(self)
         monitor = thr.Thread(target=self.start)
         monitor.daemon = True
         monitor.start()
@@ -161,34 +158,4 @@ class Mdrunr(Pyro.core.ObjBase):
                 raise
                 import sys ; sys.exit()
 
-    def echo(self):
-        logging.debug("hello")
-        print "hello"
-
-
-def _save_uri(uri):
-    with open("/tmp/awfuld_uri.tmp","w") as f:
-        f.write(str(uri))
-
-
-def start_server(args_list=None, np_tot=None):
-    """
-    Start the queue-ing server. 
-
-    :Parameters:
-        - `args_list` : list of jobs to run on the queuing server.
-        - `np_tot` : number of processors to allocate.
-
-    The queuing server can be accessed via a URI stored in 
-    :file:`/tmp/awfuld_uri.tmp`.
-    """
-    q = Mdrunr(args_list, np_tot)
-    daemon = Pyro.core.Daemon(host="127.0.0.1")
-    uri = daemon.connect(q,name="awfuld")
-    _save_uri(uri)
-    daemon.requestLoop()
-
-
-if __name__ == '__main__':
-    start_server()
 
