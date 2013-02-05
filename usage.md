@@ -14,10 +14,9 @@ Easy way
 
 Define your jobs as follows:
 
-    >>> import mdclient as mdc
     >>> import mdrunr as mdr
-    >>> job1 = mdc.Mdjob("job-1","ls",nprocs=1,mpi_mode=False)
-    >>> job2 = mdc.Mdjob("job-2","whoami",nprocs=2,mpi_mode=False,directory="~/directory")
+    >>> job1 = mdr.Mdjob("job-1","ls",nprocs=1,mpi_mode=False)
+    >>> job2 = mdr.Mdjob("job-2","whoami",nprocs=2,mpi_mode=False,directory="~/directory")
 
 Then just start the jobs:
 
@@ -25,7 +24,7 @@ Then just start the jobs:
 
 Note that control is immediately returned to the shell. The queue runs in the background. You can keep on submitting jobs to the queue:
 
-    >>> job3 = mdc.Mdjob("job-3","apt-get moo", nprocs=1,mpi_mode=False)
+    >>> job3 = mdr.Mdjob("job-3","apt-get moo", nprocs=1,mpi_mode=False)
     >>> q.add_job(job3)
 
 You can list the jobs using the `q.list_jobs()` function. This returns an ordered dictionary with `Mdjob` instances as keys and status information as values:
@@ -47,12 +46,13 @@ Start the queuing server using
 
 Then, in an interactive python shell: 
 
-    >>> import mdclient as mdc
-    >>> qserver = mdc.load_queue() # qserver is a reference to the queuing server.
+    >>> import client 
+    >>> qserver = client.load_queue() # qserver is a reference to the queuing server.
 
 `qserver` has exactly has the same methods as `q` in the "Easy way" section above. You can therefore submit jobs as before:
 
-    >>> job3 = mdc.Mdjob("job-3","apt-get moo", nprocs=1,mpi_mode=False)
+    >>> import mdrunr as mdr
+    >>> job3 = mdr.Mdjob("job-3","apt-get moo", nprocs=1,mpi_mode=False)
     >>> q.add_job(job3)
 
 You can also list jobs in a similar manner.
@@ -63,7 +63,7 @@ The advantage of using this method is that you can exit the python shell without
 Defining jobs
 =============
 
-Jobs are defined using the `Mdjob` function in the `mdclient` module. The function signature is as follows:
+Jobs are defined using the `Mdjob` function in the `mdrunr` module. The function signature is as follows:
 
     Mdjob(name, args, nprocs, mpi_mode, directory)
 
@@ -78,7 +78,5 @@ Jobs are defined using the `Mdjob` function in the `mdclient` module. The functi
 
 Notes
 =====
-
-There is currently no support for choosing directories when running jobs. Thus, if you want to run a job in some directory "/i/am/a/directory/", you should define your job as a "cd /i/am/a/directory && job".
 
 Vaguely relevant information is logged to "mdrunr.log" in the directory in which the queue is initiated.
