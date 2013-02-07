@@ -25,10 +25,6 @@ logging.basicConfig(filename="mdrunr.log",level=logging.DEBUG)
 fnull=open("/dev/null", "w")
 flog=open("/tmp/mdrunr.log", "w")
 
-JOB_QUEUING = "Queuing"
-JOB_RUNNING = "Running"
-JOB_FINISHED = "Finished"
-
 
 class Mdjob :
     """Defines a job to run."""
@@ -69,7 +65,7 @@ class JobStatus(object):
     """
     Keep a record of the current status of a job.
 
-    :Parameters:
+    :Attributes:
         - `status` : whether a job is currently in the queue,
             running or queuing.
         - `start_time` : time object indicating when the job
@@ -78,23 +74,26 @@ class JobStatus(object):
             finished, or None.
     """
 
-    def __init__(self, status=None, start_time=None, finish_time=None):
-        self.status = status
-        self.start_time = start_time
-        self.finish_time = finish_time
+    # job status flags.
+    QUEUING = "Queuing"
+    RUNNING = "Running"
+    FINISHED = "Finished"
+
+    def __init__(self):
+        self.status = None
+        self.start_time = None
+        self.finish_time = None
+
+    def set_queuing(self):
+        self.status = JobStatus.QUEUING
 
     def set_starting(self):
-        self.status = JOB_RUNNING
+        self.status = JobStatus.RUNNING
         self.start_time = time.gmtime()
 
     def set_finished(self):
         self.finish_time = time.gmtime()
-        self.status = JOB_FINISHED
-
-    def as_dict(self):
-        return { "status" : self.status, 
-                "start-time" : self.start_time,
-                "finish-time" : self.finish_time }
+        self.status = JobStatus.FINISHED
 
 
 class Runner(thr.Thread):
@@ -160,16 +159,15 @@ class Mdrunr(object):
         """
         Add a job to the queue.
         """
-        self.job_status_dict[job] = JobStatus(status=JOB_QUEUING)
+        self.job_status_dict[job] = JobStatus()
+        self.job_status_dict[job].set_queuing()
         self.queue.put(job)
 
     def list_jobs(self):
         """
         List jobs in the queue.
         """
-        return collections.OrderedDict(
-                [ (job, job_status.as_dict() ) 
-                    for job, job_status in self.job_status_dict.iteritems() ] )
+        return self.job_status_dict
 
     def _start_job(self, job):
         self.job_status_dict[job].set_starting()
