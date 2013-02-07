@@ -60,6 +60,9 @@ class Mdjob :
         sp.call(md_job, stdout=fnull, stderr=flog, shell=True)
         os.chdir(current_directory) # return to previous directory.
 
+    def __repr__(self):
+        return str(self.name)
+
 
 class JobStatus(object):
     """
@@ -94,6 +97,19 @@ class JobStatus(object):
     def set_finished(self):
         self.finish_time = time.gmtime()
         self.status = JobStatus.FINISHED
+
+    def __repr__(self):
+        repr_string = "("+str(self.status)
+        try:
+            repr_string += ", "+time.strftime("%c",self.start_time)
+        except TypeError: # start time is None (job is queuing)
+            pass
+        try:
+            repr_string += ", "+time.strftime("%c",self.finish_time)
+        except TypeError: # finish time is None (job is queuing/running)
+            pass
+        repr_string += ")"
+        return repr_string
 
 
 class Runner(thr.Thread):
