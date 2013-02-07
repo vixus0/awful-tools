@@ -13,13 +13,16 @@ A set of routines designed for interactive use.
     >>> awftools.qsub("prog",nprocs=2,directory="~/path/to/directory") 
     # will run 'prog' in the speficied directory. Prog will use up both processors
     # in the queue.
-    >>> awftools.qstat_pretty()
-    sleep1  Running
-    prog    Queuing
+    >>> awftools.qstat_pretty() # Readable list of current jobs.
+       Job     Status     Start     Finish
+    =========================================
+       sleep1  Running  10:00:00   
+       prog1   Queuing
 
 """
 
 import mdrunr
+import ioutils
 
 class NoQueueDefined(Exception):
     """
@@ -79,9 +82,32 @@ def qstat_pretty():
     Print a nicely formatted list of jobs in the queue to screen.
 
     See also: qstat
-    """
-    for job, job_status in qstat().iteritems():
-        print job.name, "  ", job_status["status"]
+    """ 
+    jobs_dict = qstat() # { Mdjob : JobStatus }
+
+    # Get the length of the longest job name to calculate width of column
+    longest_job_name = max((len(job.name) for job in jobs_dict.iterkeys()))
+    if longest_job_name > 50: # truncate at 50 chars max.
+        longest_job_name = 50 
+
+    # formats 
+    time_format = "%X" # locale-dependent time representation.
+    line_format =  "{0:>%is} {1:>12s} {2:>10s} {3:^10s}"%longest_job_name
+
+    # Print the header.
+    header = line_format.format("Job", "Status", "Start", "Finish") # title
+    print header
+    print "="*len(header) # underline title
+
+    # Print each jobs.
+    for job, job_status in jobs_dict.iteritems():
+        start_time_str = ioutils.format_time_if_defined(
+                time_format, job_status.start_time)
+        finish_time_str = ioutils.format_time_if_defined(
+                time_format, job_status.finish_time)
+        job_string = line_format.format(
+                job.name[:50],job_status.status,start_time_str,finish_time_str)
+        print job_string
 
 def _get_default_name(job_cmd, queue):
     first_word = job_cmd.split(" ",1)[0]
