@@ -18,18 +18,18 @@ import logging
 import collections
 import os
 
+import config
+
 logging.basicConfig(filename="mdrunr.log",level=logging.DEBUG)
 # To also log to stdout:
 #logging.getLogger("").addHandler(logging.StreamHandler())
-
-fnull=open("/dev/null", "w")
-flog=open("/tmp/mdrunr.log", "w")
 
 
 class Mdjob :
     """Defines a job to run."""
 
-    def __init__(self, name, args, nprocs, mpi_mode=True, directory=None):
+    def __init__(self, name, args, nprocs, mpi_mode=True, directory=None, 
+            combine_out_err=False):
         """Create a job.
   
         :Parameters:
@@ -40,15 +40,28 @@ class Mdjob :
                 run using 'mpiexec -n <nprocs> <args>'
             - `directory` : absolute path to the directory this job should run in.
                 [default : current directory]
+            - `combine_out_err` : if True, both the job's stdout and stderr will
+                be sent to the 'name.out'. If False, stdout is sent to 'name.out'
+                and stderr to 'name.err'. [default : False].
         """
         self.name = name
         self.args = args
         self.nprocs = nprocs
         self.mpi_mode = mpi_mode
         if directory is not None:
-            self.directory = os.path.abspath(os.path.expanduser(os.path.expandvars(directory)))
+            self.directory = os.path.abspath(
+                    os.path.expanduser(os.path.expandvars(directory)))
         else:
             self.directory = os.getcwd()
+        self.stdout_file = open(
+                config.STDOUT_FILE.format(job_name=self.name),
+                config.STDOUT_MODE)
+        if combine_out_err:
+            self.stderr_file = self.stdout_file
+        else:
+            self.stderr_file = open(
+                    config.STDERR_FILE.format(job_name=self.name),
+                    config.STDERR_MODE)
 
     def run(self):
         current_directory = os.getcwd() # save current directory.
@@ -57,7 +70,8 @@ class Mdjob :
             md_job = "mpiexec -n "+ str(self.nprocs) + " " + self.args
         else: 
             md_job = self.args
-        sp.call(md_job, stdout=fnull, stderr=flog, shell=True)
+        sp.call(md_job, shell=True,
+                stdout=self.stdout_file,stderr=self.stderr_file)
         os.chdir(current_directory) # return to previous directory.
 
     def __repr__(self):
