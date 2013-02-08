@@ -53,19 +53,19 @@ class Mdjob :
                     os.path.expanduser(os.path.expandvars(directory)))
         else:
             self.directory = os.getcwd()
-        self.stdout_file = open(
-                config.STDOUT_FILE.format(job_name=self.name),
-                config.STDOUT_MODE)
-        if combine_out_err:
-            self.stderr_file = self.stdout_file
-        else:
-            self.stderr_file = open(
-                    config.STDERR_FILE.format(job_name=self.name),
-                    config.STDERR_MODE)
+        self.combine_out_err = combine_out_err
+        self.stdout_name = config.STDOUT_FILE.format(job_name=self.name)
+        if not combine_out_err:
+            self.stderr_name = config.STDERR_FILE.format(job_name=self.name)
 
     def run(self):
         current_directory = os.getcwd() # save current directory.
         os.chdir(self.directory)
+        self.stdout_file = open(self.stdout_name,config.STDOUT_MODE)
+        if self.combine_out_err:
+            self.stderr_file = self.stdout_file
+        else:
+            self.stderr_file = open(self.stderr_name,config.STDERR_MODE)
         if self.mpi_mode: 
             md_job = "mpiexec -n "+ str(self.nprocs) + " " + self.args
         else: 
