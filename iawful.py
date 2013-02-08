@@ -10,9 +10,11 @@ A set of routines designed for interactive use.
     >>> import awftools
     >>> awftools.init(nprocs=2) # initialise a 2-processor queue.
     >>> awftools.qsub("sleep 20") # will run 'sleep 20' in the current directory.
-    >>> awftools.qsub("prog",nprocs=2,directory="~/path/to/directory") 
+    >>> awftools.qsub("prog",nprocs=2,directory="~/path/to/directory",
+    ...     combine_out_err=True)
     # will run 'prog' in the speficied directory. Prog will use up both processors
     # in the queue.
+    # Both stdout and stderr will be saved to a file prog.out.
     >>> awftools.qstat_pretty() # Readable list of current jobs.
        Job     Status     Start     Finish
     =========================================
@@ -52,7 +54,7 @@ def init(nprocs=None):
     GetQueue.queue = mdrunr.Mdrunr(None, nprocs)
 
 
-def qsub(cmd, name=None, nprocs=1, directory=None):
+def qsub(cmd, name=None, nprocs=1, directory=None,combine_out_err=False):
     """
     Submit a job.
 
@@ -63,10 +65,13 @@ def qsub(cmd, name=None, nprocs=1, directory=None):
             [default : 1].
         - `directory` : directory in which to run this job.
             [default : current directory].
+        - `combine_out_err` : job error is saved to the same file
+            as job output.
     """
     if name is None:
         name = _get_default_name(cmd,GetQueue.get_queue())
-    job = mdrunr.Mdjob(name,cmd,nprocs,mpi_mode=False,directory=directory)
+    job = mdrunr.Mdjob(name,cmd,nprocs,mpi_mode=False,directory=directory,
+            combine_out_err=combine_out_err)
     GetQueue.get_queue().add_job(job)
 
 def qstat():
