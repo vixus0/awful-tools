@@ -5,11 +5,14 @@ keyqueue
 
 Provides the class KeyQueue, a (hopefully) threadsafe implementation of a
 queue that supports random access to its elements.
+
+See :class:`keyqueue.KeyQueue` for more details.
 """
 
 import collections
 import Queue
 import contextlib
+import threading
 
 class KeyQueue(Queue.Queue):
     """
@@ -41,6 +44,21 @@ class KeyQueue(Queue.Queue):
         in the docstrings below.
     """
 
+    def __init__(self,maxsize=0):
+        # Almost exact copy of Queue.__init__.
+        # The only difference is that self.mutex is now
+        # a re-entrant lock. This avoids deadlocks if the
+        # user runs threadsafe operations in the 'locked'
+        # context. 
+        self.maxsize = maxsize
+        self._init(maxsize)
+        self.mutex = threading.RLock()
+        self.not_empty = threading.Condition(self.mutex)
+        self.not_full = threading.Condition(self.mutex)
+        self.all_tasks_done = threading.Condition(self.mutex)
+        self.unfinished_tasks = 0
+
+
     # The following are used to over-write default 
     # queue implementation to use an OrderedDict
     # as the data structure rather than a deque.
@@ -54,9 +72,15 @@ class KeyQueue(Queue.Queue):
     def _get(self):
         return self.queue.popitem(last=False)
 
+    def _pop(self,key):
+        return self.queue.pop(key)
+
+
+    # Threadsafe methods
+    
     def getitem(self,key):
         """
-        Non-threadsafe access to a key.
+        Return the value of the item associated with `key`.
 
         :Example:
             >>> q = KeyQueue()
@@ -65,11 +89,12 @@ class KeyQueue(Queue.Queue):
             ...    print q.getitem(1)
             'item-1'
         """
-        return self.queue[key]
+        with self.locked():
+            return self.queue[key]
 
     def setitem(self,key,value):
         """
-        Non-threadsafe alteration of an element.
+        Set the value of the item associated with `key` to `value`.
 
         :Example:
             >>> q = KeyQueue()
@@ -79,39 +104,8 @@ class KeyQueue(Queue.Queue):
             ...    print q.getitem(1)
             'new-item'
         """
-        self.queue[key] = value
-
-    def _pop(self,key):
-        return self.queue.pop(key)
-
-    @contextlib.contextmanager
-    def locked(self):
-        """
-        Lock the queue to prevent other threads accessing it.
-
-        :Example:
-            >>> q = KeyQueue()
-            >>> q.put((1,'item-1'))
-            >>> with q.locked():
-            ...     # modify q as much as you want without risking
-            ...     # interference from other treads.
-            ...     pass
-
-        Note that, due to the current implementation, only operations
-        which do not guarantee thread safety can be processed while a 
-        queue is locked. Thus, the following will cause a deadlock:
-
-            >>> with q.locked():
-            ...    q.put(('2','item-2'))
-            ...    # Deadlocks. q.put waits for q to be released.
-
-        Non-threadsafe operations that can be used while a thread
-        is locked include: `_put`, `_get`, `_pop`, `getitem`, 
-        `setitem`.
-        """
-        self.mutex.acquire()
-        yield
-        self.mutex.release()
+        with self.locked():
+            self.queue[key] = value
 
     def remove_item(self,key):
         """
@@ -134,6 +128,30 @@ class KeyQueue(Queue.Queue):
             self.not_full.notify()
         finally:
             self.mutex.release()
+
+    @contextlib.contextmanager
+    def locked(self):
+        """
+        Lock the queue to prevent other threads accessing it.
+
+        :Example:
+
+            Sometimes, a user may want to run a set of operations on the
+            queue without losing control:
+
+            >>> q = KeyQueue()
+            >>> q.put((1,'item-1'))
+            >>> with q.locked():
+            ...    value = q.getitem(1)
+            ...    q.setitem(1,value+"-suffix")
+
+            In this case, were the queue not locked, another thread 
+            may, conceivably, delete item 1 in between the `getitem` and
+            the `setitem` calls.
+        """
+        self.mutex.acquire()
+        yield
+        self.mutex.release()
 
 
 
