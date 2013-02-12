@@ -1,7 +1,11 @@
 
 import unittest
+import os
+import sys
 
-import keyqueue
+sys.path.insert(0,os.path.abspath("../.."))
+
+import awful.keyqueue as keyqueue
 
 class TestKeyQueue(unittest.TestCase):
     """

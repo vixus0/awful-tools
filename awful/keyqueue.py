@@ -75,6 +75,12 @@ class KeyQueue(Queue.Queue):
     def _pop(self,key):
         return self.queue.pop(key)
 
+    def _get_all_values(self):
+        return self.queue.values()
+
+    def _get_all_items(self):
+        return self.queue.items()
+
 
     # Threadsafe methods
     
@@ -128,6 +134,14 @@ class KeyQueue(Queue.Queue):
             self.not_full.notify()
         finally:
             self.mutex.release()
+
+    def values(self):
+        with self.locked():
+            return self._get_all_values()
+
+    def items(self):
+        with self.locked():
+            return self._get_all_items()
 
     @contextlib.contextmanager
     def locked(self):
