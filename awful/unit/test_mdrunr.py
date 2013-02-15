@@ -110,6 +110,20 @@ class TestMdrunr(unittest.TestCase):
             print job_list
         del q
 
+    def test_check_name(self):
+        q = mdrunr.Mdrunr(np_tot=2)
+        q.add_job(self.j1)
+        q.add_job(self.j2)
+        q.add_job(self.j3)
+        q.add_job(self.j4)
+        new_name, changed = q._check_name("job-9")
+        assert new_name == "job-9"
+        assert not changed
+        new_name, changed = q._check_name("job-1")
+        assert new_name == "job-1-1"
+        assert changed
+
+
 
 
 if __name__ == '__main__':

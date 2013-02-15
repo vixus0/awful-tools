@@ -75,6 +75,9 @@ class KeyQueue(Queue.Queue):
     def _pop(self,key):
         return self.queue.pop(key)
 
+    def _get_all_keys(self):
+        return self.queue.keys()
+
     def _get_all_values(self):
         return self.queue.values()
 
@@ -134,6 +137,10 @@ class KeyQueue(Queue.Queue):
             self.not_full.notify()
         finally:
             self.mutex.release()
+
+    def keys(self):
+        with self.locked():
+            return self._get_all_keys()
 
     def values(self):
         with self.locked():
