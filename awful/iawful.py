@@ -88,10 +88,10 @@ def qstat_pretty():
 
     See also: qstat
     """ 
-    jobs_dict = qstat() # { Mdjob : JobStatus }
+    jobs = qstat() # { Mdjob : JobStatus }
 
     # Get the length of the longest job name to calculate width of column
-    longest_job_name = max((len(job.name) for job in jobs_dict.iterkeys()))
+    longest_job_name = max((len(job.name) for job in jobs))
     if longest_job_name > 50: # truncate at 50 chars max.
         longest_job_name = 50 
 
@@ -105,7 +105,8 @@ def qstat_pretty():
     print "="*len(header) # underline title
 
     # Print each jobs.
-    for job, job_status in jobs_dict.iteritems():
+    for job in jobs:
+        job_status = job.status
         start_time_str = ioutils.format_time_if_defined(
                 time_format, job_status.start_time)
         finish_time_str = ioutils.format_time_if_defined(
@@ -115,9 +116,10 @@ def qstat_pretty():
         print job_string
 
 def _get_default_name(job_cmd, queue):
+    # This method should probably be re-thought, and probably
+    # put somewhere else.
     first_word = job_cmd.split(" ",1)[0]
-    number = sum(1 for job in queue.job_status_dict.iterkeys() 
-            if job.name.upper().startswith(first_word.upper()))+1
-    return first_word+str(number)
+    number = len(queue.list_jobs())
+    return first_word+"-"+str(number)
 
     
