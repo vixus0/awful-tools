@@ -1,4 +1,4 @@
 awful-tools
 ===========
 
-A collection of misc, badly coded rubbish.
+A python framework for job management on MP systems.
